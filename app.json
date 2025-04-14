@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "scheme": "yogasync",
+    "name": "yogasync",
+    "slug": "yogasync",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/YogaSync_Logo 1.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/YogaSync_Logo 1.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/YogaSync_Logo 1.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package":"com.galaxies.yogasync",
+      "googleServicesFile": "./google-services (4).json",
+      "permissions": ["CAMERA"]
+
+
+    },
+    "web": {
+      "favicon": "./assets/YogaSync_Logo 1.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "recordAudioAndroid": true
+        }
+      ],
+      "expo-router",
+      ["expo-build-properties",{
+        "android":{
+          "useFrameworks":"static"
+        }
+      }],
+      
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth"
+    ]
+  }
+}

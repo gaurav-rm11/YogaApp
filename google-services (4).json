@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "768418803405",
+    "project_id": "mc-app-15084",
+    "storage_bucket": "mc-app-15084.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:768418803405:android:86ed6d8387bc54e47ec384",
+        "android_client_info": {
+          "package_name": "com.galaxies.yogasync"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "768418803405-4kntckr2mvhb4gvd5dkcl1bj33l41s7l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApwmgSP91yhamM9G7esC4tH1hjY3lbBWU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "768418803405-4kntckr2mvhb4gvd5dkcl1bj33l41s7l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
