@@ -63,8 +63,6 @@ npm-debug.log
 *.bundle
 *.map
 
-# Images and assets (if too large)
-assets/
 
 # If you have sensitive information like Firebase configuration files
 google-services.json
