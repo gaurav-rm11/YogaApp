@@ -22,12 +22,16 @@ export default function UserScreen() {
   const [history, setHistory] = useState([]);
 
   const fetchHistory = async () => {
-    setLoading(true);
-    const { data, error } = await getExerciseHistory();
-    if (!error) {
-      setHistory(data);
+    if (user?.id) {
+      setLoading(true);
+      const { data, error } = await getExerciseHistory(user.id);  // Pass the user.id to fetch history specific to the logged-in user
+      if (!error) {
+        setHistory(data);
+      } else {
+        console.error("Error fetching exercise history:", error);
+      }
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleSignOut = async () => {
@@ -44,8 +48,10 @@ export default function UserScreen() {
 
   useEffect(() => {
     navigation.setOptions({ headerRight });
-    fetchHistory();
-  }, []);
+    if (user?.id) {
+      fetchHistory();
+    }
+  }, [user?.id]);
 
   return (
     <ScrollView style={styles.container}>
@@ -66,7 +72,11 @@ export default function UserScreen() {
             <View key={item.id} style={styles.historyItem}>
               <Text style={styles.exerciseName}>{item.exercise_name}</Text>
               <Text style={styles.exerciseDetails}>
-                Date: {new Date(item.date).toLocaleDateString()} | Duration: {item.duration}s | Accuracy: {item.accuracy}%
+              Date: {new Date(item.date).toLocaleDateString(undefined, {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+})} | Duration: {item.duration}s
               </Text>
             </View>
           ))

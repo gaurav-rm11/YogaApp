@@ -1,100 +1,173 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  ScrollView,
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { useDatabase } from '../context/DatabaseContext';
+import { useAuth } from '../context/authContext';
 import { useLocalSearchParams } from 'expo-router';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import Timer from '../components/Timer';
-import { SafeAreaView } from 'react-native';
-
-
-const poseData = {
-  'Cobra Pose': {
-    image: require('../assets/cobra pose.png'),
-    steps: ['Lie face down', 'Place hands under shoulders', 'Lift chest up while keeping pelvis down'],
-    benefits: ['Strengthens spine', 'Stretches chest and lungs', 'Relieves stress'],
-  },
-  'Pyramid Pose': {
-    image: require('../assets/pyramid pose.png'),
-    steps: ['Stand tall', 'Step one leg back', 'Bend forward over front leg'],
-    benefits: ['Stretches hamstrings', 'Improves posture', 'Stimulates abdominal organs'],
-  },
-  // Add more poses as needed...
-};
 
 export default function ExerciseScreen() {
-  const { pose } = useLocalSearchParams();
-  const [showCamera, setShowCamera] = useState(false);
+  const { pose } = useLocalSearchParams(); // ✅ Grab pose param from URL
+  const { getAllExercises, addExerciseHistory } = useDatabase(); // Ensure addExerciseHistory is available in your context
+  const { user } = useAuth();
+
+  const [exerciseData, setExerciseData] = useState(null);
   const [showTimer, setShowTimer] = useState(false);
-  const [permission, requestPermission] = useCameraPermissions();
+  const [isTimerActive, setIsTimerActive] = useState(false);
+  const [seconds, setSeconds] = useState(0);
+  const [startTime, setStartTime] = useState(null); // Track start time
 
-  const data = poseData[pose as string];
-  if (!data) return <Text>Pose not found</Text>;
+  const timerInterval = useRef<any>(null);
 
-  const handleStartAI = async () => {
-    if (!permission?.granted) {
-      await requestPermission();
+  useEffect(() => {
+    const fetchExerciseData = async () => {
+      const { data, error } = await getAllExercises();
+      if (error) {
+        console.error('Error fetching exercises:', error);
+      } else {
+        const selectedExercise = data.find((exercise) => exercise.name === pose);
+        setExerciseData(selectedExercise);
+      }
+    };
+
+    if (pose) {
+      fetchExerciseData();
     }
-    setShowCamera(true);
+  }, [pose, getAllExercises]);
+
+  const handleStartAI = () => {
+    // launch camera logic here
   };
 
-  if (showCamera && permission?.granted) {
-    return (
-      <View style={{ flex: 1 }}>
-        <CameraView style={{ flex: 1 }} />
-      </View>
-    );
-  }
+  const startTimer = () => {
+    if (!isTimerActive) {
+      setStartTime(Date.now()); // Track start time when the timer starts
+      timerInterval.current = setInterval(() => {
+        setSeconds((prev) => prev + 1);
+      }, 1000);
+      setIsTimerActive(true);
+    }
+  };
+
+  const pauseTimer = () => {
+    clearInterval(timerInterval.current);
+    setIsTimerActive(false);
+    // Save the exercise history when the user pauses the timer
+    if (seconds > 0) {
+      addExerciseHistory({
+        userId: user.id,
+        exerciseName: pose,
+        duration: seconds,
+        completedAt: new Date().toISOString(),
+      });
+      console.log("added to db successfully")
+    }
+  };
+
+  const resetTimer = () => {
+    setSeconds(0);
+    setStartTime(null);
+    clearInterval(timerInterval.current);
+    setIsTimerActive(false);
+  };
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-    <View style={{ flex: 1, backgroundColor: '#fafafa' }}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.header}>{pose}</Text>
-        <Image source={data.image} style={styles.image} resizeMode="contain" />
+        {exerciseData ? (
+          <>
+            <Text style={styles.header}>{pose}</Text>
+            <Image
+              source={{ uri: exerciseData.image_url }}
+              style={styles.image}
+              resizeMode="contain"
+            />
 
-        <Text style={styles.sectionTitle}>Steps</Text>
-        {data.steps.map((step, idx) => (
-          <Text style={styles.step} key={idx}>• {step}</Text>
-        ))}
+            <Text style={styles.sectionTitle}>Steps</Text>
+            {exerciseData.steps.map((step, idx) => (
+              <Text style={styles.step} key={idx}>
+                • {step}
+              </Text>
+            ))}
 
-        <Text style={styles.sectionTitle}>Benefits</Text>
-        {data.benefits.map((benefit, idx) => (
-          <Text style={styles.benefit} key={idx}>✓ {benefit}</Text>
-        ))}
+            <Text style={styles.sectionTitle}>Benefits</Text>
+            {exerciseData.benefits.map((benefit, idx) => (
+              <Text style={styles.benefit} key={idx}>
+                ✓ {benefit}
+              </Text>
+            ))}
 
-        {showTimer && <Timer />}
+            {showTimer && (
+              <View style={styles.timerContainer}>
+                <Text style={styles.timerText}>{seconds}s</Text>
+                <View style={styles.timerButtons}>
+                  <TouchableOpacity
+                    style={styles.timerButton}
+                    onPress={isTimerActive ? pauseTimer : startTimer}
+                  >
+                    <Text style={styles.buttonText}>
+                      {isTimerActive ? 'Pause Timer' : 'Start Timer'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.timerButton}
+                    onPress={resetTimer}
+                  >
+                    <Text style={styles.buttonText}>Reset Timer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
 
-        {/* These buttons are inside ScrollView now so they scroll too */}
-        <View style={styles.buttonsContainer}>
-          <TouchableOpacity style={styles.timerButton} onPress={() => setShowTimer(true)}>
-            <Ionicons name="time-outline" size={20} color="white" />
-            <Text style={styles.buttonText}>Start Timer</Text>
-          </TouchableOpacity>
+            <View style={styles.buttonsContainer}>
+              <TouchableOpacity
+                style={styles.timerButton}
+                onPress={() => setShowTimer(true)}
+              >
+                <Ionicons name="time-outline" size={20} color="white" />
+                <Text style={styles.buttonText}>Start Timer</Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity style={styles.aiButton} onPress={handleStartAI}>
-            <FontAwesome5 name="robot" size={20} color="white" />
-            <Text style={styles.buttonText}>Start AI</Text>
-          </TouchableOpacity>
-        </View>
+              <TouchableOpacity
+                style={styles.aiButton}
+                onPress={handleStartAI}
+              >
+                <FontAwesome5 name="robot" size={20} color="white" />
+                <Text style={styles.buttonText}>Start AI</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <Text>Loading exercise data...</Text>
+        )}
       </ScrollView>
-    </View>
     </SafeAreaView>
   );
 }
 
-
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#fafafa',
+  },
+  container: {
+    flexGrow: 1,
+    padding: 16,
+    paddingBottom: 32,
   },
   header: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 12,
+    marginBottom: 16,
     color: '#333',
-    textAlign: 'center',
   },
   image: {
     width: '100%',
@@ -105,44 +178,58 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 6,
-    color: '#444',
+    marginVertical: 12,
   },
   step: {
     fontSize: 16,
-    color: '#555',
-    marginBottom: 4,
+    color: '#444',
+    marginBottom: 6,
   },
   benefit: {
     fontSize: 16,
     color: '#4caf50',
-    marginBottom: 4,
+    marginBottom: 6,
+  },
+  timerContainer: {
+    marginTop: 20,
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  timerText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  timerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  timerButton: {
+    backgroundColor: '#3f51b5',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  aiButton: {
+    backgroundColor: '#ff4081',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginHorizontal: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontWeight: '600',
+    marginLeft: 8,
   },
   buttonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 30,
-  },
-  timerButton: {
-    backgroundColor: '#a910ff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  aiButton: {
-    backgroundColor: '#5e35b1',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-  },
-  buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    marginLeft: 8,
+    marginTop: 20,
   },
 });

@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useState } from 'react';
-
 import {
   StyleSheet,
   Text,
@@ -7,40 +6,23 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { Link, useRouter, useNavigation } from 'expo-router';
-import { useAuth } from '../context/authContext';
 import { Ionicons } from '@expo/vector-icons';
-
-const exercises = [
-  {
-    name: 'Cobra Pose',
-    image: require('../assets/cobra pose.png'),
-  },
-  {
-    name: 'Pyramid Pose',
-    image: require('../assets/pyramid pose.png'),
-  },
-  {
-    name: 'Tree Pose',
-    image: require('../assets/tree pose.png'),
-  },
-  {
-    name: 'Triangle Pose',
-    image: require('../assets/triangle pose.png'),
-  },
-  {
-    name: 'Warrior Pose',
-    image: require('../assets/warrior pose.png'),
-  },
-];
+import { useAuth } from '../context/authContext';
+import { useDatabase } from '../context/DatabaseContext'; // 👈 your DB logic
 
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
+  const { getAllExercises } = useDatabase(); // 👈 use the db context method
   const router = useRouter();
   const navigation = useNavigation();
+
   const [greeting, setGreeting] = useState('Welcome');
+  const [exercises, setExercises] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const headerRight = useCallback(() => {
     if (isAuthenticated) {
@@ -68,27 +50,61 @@ export default function Home() {
     if (hour < 12) setGreeting('Good Morning');
     else if (hour < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
+
+    fetchExercises();
   }, [headerRight, navigation]);
+
+  const fetchExercises = async () => {
+    setLoading(true);
+    const { data, error } = await getAllExercises();
+
+    if (error) {
+      console.error('Error fetching exercises:', error.message);
+    } else {
+      setExercises(data || []);
+    }
+
+    setLoading(false);
+  };
 
   return (
     <>
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.greeting}>{greeting}, {user?.name || 'Yogi'} 👋</Text>
-        <Text style={styles.subtitle}>Ready to align your body and mind? Pick a pose below to begin!</Text>
+        <Text style={styles.greeting}>
+          {greeting}, {user?.user_metadata?.username || 'Yogi'} 👋
+        </Text>
+        <Text style={styles.subtitle}>
+          Ready to align your body and mind? Pick a pose below to begin!
+        </Text>
 
-        <View style={styles.exerciseGrid}>
-          {exercises.map((exercise, index) => (
-            <View style={styles.card} key={index}>
-              <Image source={exercise.image} style={styles.image} resizeMode="cover" />
-              <Text style={styles.cardTitle}>{exercise.name}</Text>
-              <TouchableOpacity style={styles.startButton} onPress={() => router.push({ pathname: '/exercise-screen', params: { pose: exercise.name } })}
-              >
-                <Text style={styles.startButtonText}>Start Now</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
+        {loading ? (
+          <ActivityIndicator size="large" color="#a910ff" style={{ marginTop: 20 }} />
+        ) : (
+          <View style={styles.exerciseGrid}>
+            {exercises.map((exercise, index) => (
+              <View style={styles.card} key={index}>
+                <Image
+                  source={{ uri: exercise.image_url }}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+                <Text style={styles.cardTitle}>{exercise.name}</Text>
+                <TouchableOpacity
+                  style={styles.startButton}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/exercise-screen',
+                      params: { pose: exercise.name },
+                    })
+                  }
+                >
+                  <Text style={styles.startButtonText}>Start Now</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </>
   );
